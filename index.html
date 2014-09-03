@@ -4,6 +4,8 @@
 
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="//d3js.org/topojson.v1.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
+<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
 
 <style>
 
@@ -48,15 +50,6 @@ div.tooltip {
 	pointer-events: none;
 }
 
-.q0-9 { fill:rgb(247,251,255); }
-.q1-9 { fill:rgb(222,235,247); }
-.q2-9 { fill:rgb(198,219,239); }
-.q3-9 { fill:rgb(158,202,225); }
-.q4-9 { fill:rgb(107,174,214); }
-.q5-9 { fill:rgb(66,146,198); }
-.q6-9 { fill:rgb(33,113,181); }
-.q7-9 { fill:rgb(8,81,156); }
-.q8-9 { fill:rgb(8,48,107); }
 
 </style>
 
@@ -75,9 +68,13 @@ div.tooltip {
 			.center([-120, 36])
 			.translate([width/2, height/2]);
 
-	//var projection = d3.geo.albersUsa() //works but tried another method above
-	//	.scale(2500)
-	//	.translate([1000, 360]);
+	//threshold scale
+	//max is 51947497395
+	var areaMax = 51947497395;
+	/*var color = d3.scale.threshold()
+		.domain([areaMax * .1, areaMax * .2, areaMax * .30, areaMax * .6, areaMax])
+		.range(["#f2f0f7", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"]); */
+
 
 	var path = d3.geo.path()
 		.projection(projection);
@@ -86,8 +83,19 @@ div.tooltip {
 		.attr("width", width)
 		.attr("height", height);
 
+	//global for console
+	var myObj = {}
+
+
 	d3.json("ca-counties-topo-simple.json", function(error, ca){
 		//console.log(ca.objects.caCounties); //for navigating the data in the console
+
+		var color = d3.scale.quantize() //colorscale
+				.domain([1, areaMax])
+				.range(colorbrewer.Reds[6])
+
+		myObj = topojson.feature(ca, ca.objects.caCounties);
+		console.log("myObj is available");
 
 		svg.append("path")
 			.datum(topojson.feature(ca, ca.objects.caCounties))
@@ -100,6 +108,8 @@ div.tooltip {
 			.enter().append("path")
 			.attr("class", function(d) { return "subunit " + d.properties.name; })
 			.attr("d", path)
+			  //get color by land area
+			  .style("fill", function(d){ return color(d.properties.areaLand)})
 			.on("mouseover", function(d){ //tooltip
 				div.transition()
 					.duration(200)
