@@ -1,11 +1,12 @@
 <html>
 <head>
-	<title></title>
+<title></title>
 
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="//d3js.org/topojson.v1.min.js"></script>
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
-<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+<script src="//d3js.org/colorbrewer.v1.min.js"></script>
+<script src="//d3js.org/queue.v1.min.js"></script>
 
 <style>
 
@@ -13,9 +14,6 @@
 .subunit.mateo,
 .subunit.alameda,
 .subunit.santa.clara {
-	fill: maroon;
-	stroke: white;
-	stroke-linejoin: round;
 }
 
 .subunit {
@@ -50,6 +48,14 @@ div.tooltip {
 	pointer-events: none;
 }
 
+.key {
+	/*stroke: black;*/
+}
+
+.legend {
+	font-size: 10px;
+}
+
 
 </style>
 
@@ -66,33 +72,31 @@ div.tooltip {
 	var  projection = d3.geo.mercator()
 			.scale(1000 * 2)
 			.center([-120, 36])
-			.translate([width/2, height/2]);
+			.translate([width/4, height/2]);
 
 	//threshold scale
 	//max is 51947497395
 	var areaMax = 51947497395;
-	/*var color = d3.scale.threshold()
-		.domain([areaMax * .1, areaMax * .2, areaMax * .30, areaMax * .6, areaMax])
-		.range(["#f2f0f7", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"]); */
 
 
 	var path = d3.geo.path()
 		.projection(projection);
+
 
 	var svg = d3.select("#map").append("svg")
 		.attr("width", width)
 		.attr("height", height);
 
 	//global for console
-	var myObj = {}
+	var myObj = {};
 
+	//function to assign colors to data
+	var color = d3.scale.quantize() //colorscale
+		.domain([1, areaMax])
+		.range(colorbrewer.Reds[6]);
 
 	d3.json("ca-counties-topo-simple.json", function(error, ca){
 		//console.log(ca.objects.caCounties); //for navigating the data in the console
-
-		var color = d3.scale.quantize() //colorscale
-				.domain([1, areaMax])
-				.range(colorbrewer.Reds[6])
 
 		myObj = topojson.feature(ca, ca.objects.caCounties);
 		console.log("myObj is available");
@@ -130,13 +134,57 @@ div.tooltip {
 			.attr("d", path)
 			.attr("class", "exterior-boundary");
 
-		//tooltop declaration
+		//tooltip declaration
 		var div = d3.select("#map").append("div")
 			.attr("class", "tooltip")
 			.style("opacity", 0);
 	});
 
-	//36.980106, -119.317593
+	//key position encoding
+	var y = d3.scale.linear()
+		.domain([0, areaMax]) //input data
+		.range([0, 100]); //height of the key
+
+	//axis styling
+	var yAxis = d3.svg.axis()
+		.scale(y)
+		.orient("right")
+		.tickSize(13)
+		.tickValues(color.domain())
+		.tickFormat();
+
+	var colorBar = svg.append("g")
+		.attr("class", "key")
+		.attr("transform", "translate(" + (.3 * width) + "," + (.05 * height) + ")")
+		.selectAll("rect")
+		.data(color.range().map(function(col) {
+			var d = color.invertExtent(col);
+			return d;
+		}));
+
+	colorBar.enter()
+		.append("rect")
+			.attr("width", 10)
+			.attr("y", function(d) { return y(d[0]); })
+			.attr("height", function(d) { return y(d[1]) - y(d[0]); })
+			.attr("fill", function(d) { return color(d[0]); });
+	
+	var truncate = d3.format("0f");
+	var format = function(num){
+		if (num === 1) return 1;
+		return truncate(num/100000000);
+	}
+
+	//labels
+	colorBar.enter().append('text')
+		.attr("class", "legend")
+		.attr("y", function(d, i) {
+			return y(d[1]) - 5; })
+		.attr("x", 12)
+		.text(function(d,i) { 
+			console.log(d[0]);
+			return format(d[0]) + " - " + format(d[1]) + " mil. sq. meters"; }); 
+
 </script>
 
 </body>
