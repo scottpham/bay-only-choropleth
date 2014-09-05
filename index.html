@@ -10,15 +10,14 @@
 
 <style>
 
-.subunit.San.Francisco,
-.subunit.mateo,
-.subunit.alameda,
-.subunit.santa.clara {
+.subunit.San.Benito,
+.subunit.Lake{
+	fill: gray;
 }
 
 .subunit {
 	fill: steelblue;
-	stroke: white;
+	stroke: gray;
 	stroke-width: 1px;
 }
 
@@ -32,7 +31,7 @@
 	fill: none;
 	stroke: black;
 	stroke-linejoin: round;
-	stroke-width: 2px;
+	stroke-width: 1px;
 }
 
 div.tooltip {
@@ -49,19 +48,25 @@ div.tooltip {
 }
 
 .key {
-	/*stroke: black;*/
-}
-
-.legend {
 	font-size: 9px;
 }
+
+.key path {
+	display: none;
+}
+
+.key line {
+	stroke: #000;
+	shape-rendering: crispEdges;
+}
+
 
 
 </style>
 
 </head>
 <body>
-	<h1>Choropleth of Foreign-Born By County</h1>
+	<h1>Total 1033 Equipment By Value and County</h1>
 	<div id = "map"></div>
 
 <script>
@@ -84,72 +89,85 @@ div.tooltip {
 	//global for console
 	var myObj = {};
 
-	var peopleMax = 3473925;
-	//function to assign colors to data
-	var color = d3.scale.quantile() //colorscale
-		.domain([1, peopleMax])
-		.range(colorbrewer.RdGy[9]);
+	
+	//format for tooltip
+	var format = function(d){
+		if (d) { return (d3.format("$,f"))(d) }
+		else { return "None"}
 
-	//format
-	var format = d3.format(",.2r");
+		}
 
-	d3.json("ca-counties-topo.json", function(error, ca){
-		
-		d3.csv("census.csv", function (error, data) {
-			var rateById = {};
+	queue()
+		.defer(d3.json, "caCountiesTopoSimple.json")
+		.defer(d3.csv, "defense-csv.csv")
+		.await(ready);
 
-			data.forEach(function(d) { 
-				rateById[d.geoid] = +d.total;})
+	var rateByCounty = {};
 
-			myObj = topojson.feature(ca, ca.objects.caCounties);
-			console.log("myObj is available");
+	function ready(error, ca, defense){
+		//create a js object which maps county names to values
+		defense.forEach(function(d) { 
+			rateByCounty[d.county] = +d.value;})
 
-			svg.append("path")
-				.datum(topojson.feature(ca, ca.objects.caCounties))
-				.attr("class", "land")
-				.attr("d", path);
+		var max = d3.max(defense, function(d) { return +d.value; });
 
-			//bind feature data to the map
-			svg.selectAll(".subunit")
-				  .data(topojson.feature(ca, ca.objects.caCounties).features)
-				.enter().append("path")
-				.attr("class", function(d) { return "subunit " + d.properties.name; })
-				.attr("d", path)
-				  //get color from csv call
-				  .style("fill", function(d){ return color(rateById[d.id]);
-				  })
-				.on("mouseover", function(d){ //tooltip
-					div.transition()
-						.duration(200)
-						.style("opacity", .9);
-					div.html(d.properties.fullName + "<p>" + "Foreign Born: " + format(rateById[d.id]))//warning this is an approximation
-						.style("left", (d3.event.pageX) + 10 + "px")
-						.style("top", (d3.event.pageY - 30) + "px"); 
-				})
-				.on("mouseout", function(d) { 
-					div.transition()
-						.duration(500)
-						.style("opacity", 0.0);
-				});
+		//function to assign colors to shapes
+		var color = d3.scale.threshold() //colorscale
+			.domain([1000000, 5000000, 10000000, 15000000, 20000000])
+			.range(colorbrewer.Greens[6]);
 
-			//exterior border
-			svg.append("path")
-				.datum(topojson.mesh(ca, ca.objects.caCounties, function(a, b) { return a === b;}))
-				.attr("d", path)
-				.attr("class", "exterior-boundary");
+		//format for legend
+		var truncate = function(d) { 
+				return '$' + (d/1000000) + " m";
+			};
 
-			//tooltip declaration
-			var div = d3.select("#map").append("div")
-				.attr("class", "tooltip")
-				.style("opacity", 0);
+		svg.append("path")
+			.datum(topojson.feature(ca, ca.objects.subunits))
+			.attr("class", "land")
+			.attr("d", path);
 
-		});	
-	});
+		//bind feature data to the map
+		svg.selectAll(".subunit")
+			  .data(topojson.feature(ca, ca.objects.subunits).features)
+			.enter().append("path")
+			.attr("class", function(d) { return "subunit " + d.properties.name; })
+			.attr("d", path)
+			  //get color from csv call
+			  .style("fill", function(d){ 
+			  	var string = d.properties.name;
+			  	upper = string.toUpperCase();
+			  	return color(rateByCounty[upper]);
+			  })
+			.on("mouseover", function(d){ //tooltip
+				div.transition()
+					.duration(200)
+					.style("opacity", .9);
+				div.html(d.properties.fullName + "<p>" + "Total Value: " + format(rateByCounty[d.properties.name.toUpperCase()]))//warning this is an approximation
+					.style("left", (d3.event.pageX) + 10 + "px")
+					.style("top", (d3.event.pageY - 30) + "px"); 
+			})
+			.on("mouseout", function(d) { 
+				div.transition()
+					.duration(500)
+					.style("opacity", 0.0);
+			});
 
-	//key position encoding
+		//exterior border
+		svg.append("path")
+			.datum(topojson.mesh(ca, ca.objects.subunits, function(a, b) { return a === b;}))
+			.attr("d", path)
+			.attr("class", "exterior-boundary");
+
+		//tooltip declaration
+		var div = d3.select("#map").append("div")
+			.attr("class", "tooltip")
+			.style("opacity", 0);
+
+	//key position encoding for legend
 	var y = d3.scale.linear()
-		.domain([0, peopleMax]) //input data
-		.range([0, 100]); //height of the key
+		.domain([0, max]) //input data
+		.range([0, 150]); //height of the key
+
 
 	var colorBar = svg.append("g")
 		.attr("class", "key")
@@ -157,24 +175,41 @@ div.tooltip {
 		.selectAll("rect")
 		.data(color.range().map(function(col) {
 			var d = color.invertExtent(col);
+			if (d[0] == null) d[0] = y.domain()[0];
+			if (d[1] == null) d[1] = y.domain()[1];
 			return d;
 		}));
 
+	//create color segments
 	colorBar.enter()
 		.append("rect")
 			.attr("width", 10)
-			.attr("y", function(d) { return y(d[0]); })
+			.attr("y", function(d) { 
+				return y(d[0]); })
 			.attr("height", function(d) { return y(d[1]) - y(d[0]); })
-			.attr("fill", function(d) { return color(d[0]); });
+			.attr("fill", function(d) { return color(d[1]); });
 
-	//labels
-	colorBar.enter().append('text')
-		.attr("class", "legend")
-		.attr("y", function(d, i) {
-			return y(d[1]) - 3; })
-		.attr("x", 12)
-		.text(function(d,i) { 
-			if (i === 0 | i === 4 | i === 8) return format(d[1]) + " people."; }); 
+	//get array of legend domain
+	var colorDomain = color.domain();
+
+	var yAxis = d3.svg.axis()
+	    .scale(y)
+	    .orient("right")
+	    .tickSize(10)
+	    .tickValues([colorDomain[0], colorDomain[2], colorDomain[4]])
+	    .tickFormat(truncate);
+
+	console.log(format(max));
+
+	d3.select(".key")
+		.call(yAxis)
+		.append("text")
+		.attr("y", -10)
+		.text("Cash Value of Gear")
+		;
+
+	//end of ready function
+	}
 
 </script>
 
