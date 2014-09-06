@@ -35,7 +35,7 @@ function draw_graphic(){
 
 function render(width) {
 
-    var height = width;
+    var height = .9 * width;
 
     console.log(width);
 
