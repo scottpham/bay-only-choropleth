@@ -30,6 +30,7 @@ function draw_graphic(){
         $map.empty();
         var width = $map.width();
         render(width);
+        window.onresize = draw_graphic; //very important! the key to responsiveness
     }
 }
 
