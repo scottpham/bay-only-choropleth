@@ -36,14 +36,15 @@ function draw_graphic(){
 
 function render(width) {
 
-    var height = .9 * width;
+    var height = .6 * width;
 
-    console.log(width);
+    widthKey = 130;
+    width = width - widthKey;
 
     var  projection = d3.geo.mercator()
-        .scale(width*4)
-        .center([-124.19, 41.92]) //exact upper left of california according to latlong.net
-        .translate([margin.left,margin.top]);
+        .scale(width*14)
+        .center([-123.7527, 39.0082]) //long, lat
+        .translate([margin.left, margin.top]);
 
     var path = d3.geo.path()
         .projection(projection);
@@ -58,12 +59,12 @@ function render(width) {
     //format for tooltip
     var format = function(d){
         if (d) { return (d3.format("$,f"))(d) }
-        else { return "None"}
+        else { return ""}
         }
 
     queue()
         .defer(d3.json, "caCountiesTopoSimple.json")
-        .defer(d3.csv, "defense-csv.csv")
+        .defer(d3.csv, "defense-bay-only.csv")
         .await(ready);
 
     var rateByCounty = {};
@@ -77,8 +78,8 @@ function render(width) {
 
         //function to assign colors to shapes
         var color = d3.scale.threshold() //colorscale
-            .domain([1000000, 5000000, 10000000, 15000000, 20000000])
-            .range(colorbrewer.Greens[6]);
+            .domain([250000, 500000, 750000, 1000000, 1500000, 2000000])
+            .range(colorbrewer.Greens[7]);
 
         //format for legend
         var truncate = function(d) { 
@@ -106,7 +107,7 @@ function render(width) {
                 div.transition()
                     .duration(200)
                     .style("opacity", .9);
-                div.html(d.properties.fullName + "<p>" + "Total Value: " + format(rateByCounty[d.properties.name.toUpperCase()]))//warning this is an approximation
+                div.html(d.properties.fullName + "<p>" + format(rateByCounty[d.properties.name.toUpperCase()]))//warning this is an approximation
                     .style("left", (d3.event.pageX) + 10 + "px")
                     .style("top", (d3.event.pageY - 30) + "px"); 
             })
@@ -130,27 +131,35 @@ function render(width) {
     //key position encoding for legend
     var y = d3.scale.linear()
         .domain([0, max]) //input data
-        .range([0, width/4]); //height of the key
+        .range([0, .75*height]); //height of the key
 
-
-    var colorBar = svg.append("g")
+    var colorBar = d3.select("#map").append("svg")
+        .attr("class", "key-box")
+        .attr("width", widthKey-margin.left)
+        .attr("height", height)
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+        .append("g")
         .attr("class", "key")
-        .attr("transform", "translate(" + (.4 * width) + "," + margin.top * 2 + ")") //position w/in svg
+        .attr("transform", "translate(" + (.25 * widthKey) + "," + margin.top * 2 + ")") //position w/in svg
         .selectAll("rect")
         .data(color.range().map(function(col) {
             var d = color.invertExtent(col);
             if (d[0] == null) d[0] = y.domain()[0];
             if (d[1] == null) d[1] = y.domain()[1];
             return d;
+            console.log(d);
         }));
 
     //create color segments
     colorBar.enter()
         .append("rect")
-            .attr("width", 10)
+            .attr("width", 40)
             .attr("y", function(d) { 
                 return y(d[0]); })
-            .attr("height", function(d) { return y(d[1]) - y(d[0]); })
+            .attr("height", function(d) { 
+                console.log(d)
+                console.log(y(d[1]));
+                return y(d[1]) - y(d[0]); })
             .attr("fill", function(d) { return color(d[1]); });
 
     //get array of legend domain
@@ -159,8 +168,8 @@ function render(width) {
     var yAxis = d3.svg.axis()
         .scale(y)
         .orient("right")
-        .tickSize(10)
-        .tickValues([colorDomain[0], colorDomain[2], colorDomain[4]])
+        .tickSize(40)
+        .tickValues([colorDomain[1], colorDomain[3], colorDomain[5]])
         .tickFormat(truncate);
 
     //console.log(format(max));
@@ -169,8 +178,7 @@ function render(width) {
         .call(yAxis)
         .append("text")
         .attr("y", -5)
-        .text("Cash Value of Gear")
-        ;
+        .text("Cash Value of Gear");
 
     //end of ready function
     }

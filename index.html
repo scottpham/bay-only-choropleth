@@ -133,14 +133,10 @@
             pointer-events: none;
                 }
 
-        .subunit.San.Benito,
-        .subunit.Lake{
-            fill: gray;
-        }
 
         .subunit {
-            fill: steelblue;
-            stroke: lightgray;
+            fill: lightgray;
+            stroke: white;
             stroke-width: 1px;
         }
 
@@ -164,19 +160,25 @@
         .key path {
             display: none;
         }
-
+        /*Tick lines*/
         .key line {
             shape-rendering: crispEdges;
-            stroke: lightgray;
-
+            stroke: white;
         }
 
+        svg {
+            border-style: solid;
+        }
 
+        .key-box {
+            border-style: solid;
+            border-left: none;
+        }
 
         </style>
 </head>
 <body>
-    <h1>1033 Gear In California/h1>
+    <h1>1033 Gear In California</h1>
     <h2>The total value of all gear acquired through the 1033 program 2006 - 2013.</h2>
     <p></p>
 
