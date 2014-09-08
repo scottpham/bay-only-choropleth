@@ -90,12 +90,23 @@ function render(width) {
             .datum(topojson.feature(ca, ca.objects.subunits))
             .attr("class", "land")
             .attr("d", path);
+        
 
-        //bind feature data to the map
+        //bind geo data to the map
         svg.selectAll(".subunit")
               .data(topojson.feature(ca, ca.objects.subunits).features)
             .enter().append("path")
-            .attr("class", function(d) { return "subunit " + d.properties.name; })
+            .attr("class", function(d) {
+
+                var string = d.properties.name;
+                upper = string.toUpperCase();
+
+                if (upper in rateByCounty) {
+                return "subunit " + d.properties.name + " bayArea"; }
+                else {
+                return "subunit " + d.properties.name;
+                }
+            })
             .attr("d", path)
               //get color from csv call
               .style("fill", function(d){ 
@@ -157,8 +168,6 @@ function render(width) {
             .attr("y", function(d) { 
                 return y(d[0]); })
             .attr("height", function(d) { 
-                console.log(d)
-                console.log(y(d[1]));
                 return y(d[1]) - y(d[0]); })
             .attr("fill", function(d) { return color(d[1]); });
 
@@ -177,7 +186,9 @@ function render(width) {
     d3.select(".key")
         .call(yAxis)
         .append("text")
+            .attr("class", "label")
         .attr("y", -5)
+        .attr("x", 20)
         .text("Cash Value of Gear");
 
     //end of ready function
