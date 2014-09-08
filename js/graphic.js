@@ -63,7 +63,7 @@ function render(width) {
         }
 
     queue()
-        .defer(d3.json, "caCountiesTopoSimple.json")
+        .defer(d3.json, "caCounties.json")
         .defer(d3.csv, "defense-bay-only.csv")
         .await(ready);
 
